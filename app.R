@@ -50,7 +50,6 @@ bikestations_in_distr_in_area <- readRDS("bikestations_in_distr_in_area.RDS")
 #-----------------
 
 shiny::shinyApp(
-
   
   ui = f7Page(
     title = "Walking and biking in Helsinki", 
