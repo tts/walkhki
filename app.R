@@ -229,6 +229,8 @@ shiny::shinyApp(
           addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6) 
       }
       
+      m
+      
     })
     
     
