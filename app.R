@@ -44,7 +44,6 @@ prot_build_in_distr_in_area <- readRDS("prot_build_in_distr_in_area.RDS")
 
 bikestations_in_distr_in_area <- readRDS("bikestations_in_distr_in_area.RDS")
 
-
 #-----------------
 # shinyMobile app
 #-----------------
@@ -52,6 +51,9 @@ bikestations_in_distr_in_area <- readRDS("bikestations_in_distr_in_area.RDS")
 shiny::shinyApp(
   
   ui = f7Page(
+    
+    waiter::waiter_show_on_load(),
+
     title = "Walking and biking in Helsinki", 
     preloader = FALSE, 
     allowPWA = FALSE,
@@ -102,7 +104,11 @@ shiny::shinyApp(
                           choices = districts,
                           selected = "Kluuvi",
                           openIn = "popup")
-            )
+            ),
+          
+          f7Card(
+            textOutput(outputId = "note1")
+          )
         )
       ),
  
@@ -158,14 +164,14 @@ shiny::shinyApp(
 
                f7Row(
                  f7Col(
+                   # f7Card(
+                   #   textOutput(outputId = "note1")
+                   # ),
                    f7Card(
-                     textOutput(outputId = "note1")
+                     htmlOutput(outputId = "note2")
                    ),
                    f7Card(
-                     textOutput(outputId = "note2")
-                   ),
-                   f7Card(
-                     textOutput(outputId = "note3")
+                     htmlOutput(outputId = "note3")
                    )
                  )
                )
@@ -221,15 +227,16 @@ shiny::shinyApp(
       
       if(nrow(Buildings()) > 0) {
         m <- m %>%
-          addPolygons(data = sf::st_zm(Buildings()), color = "darkorange", label = Buildings()$osoite)
+          addPolygons(data = sf::st_zm(Buildings()), color = "darkorange", 
+                      label = paste0(Buildings()$osoite, " (", Buildings()$laji, ")"))
       }
       
       if(nrow(Stations()) > 0) {
         m <- m %>% 
-          addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6) 
+          addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6)
       }
-      
-      m
+        
+        m
       
     })
     
@@ -264,16 +271,23 @@ shiny::shinyApp(
     
     
     output$note1 <- renderText({
-      "Click a yellow bike station to find out the number of available bikes. Note that there are a few new stations opening up in summer 2021 with no info yet"
+      "Click a yellow bike station to find out the number of available bikes. Note that there are a few new stations opening up in summer 2021 with no info yet."
       })
     
-    output$note2 <- renderText({
-      "All data via Helsinki Region Infoshare hri.fi"
+    output$note2 <- renderUI({
+      HTML("<p>All data via <a href='https://hri.fi'>Helsinki Region Infoshare</a>:</p>
+           <ul>
+             <li><a href='https://hri.fi/data/en_GB/dataset/paakaupunkiseudun-aluejakokartat'>Metropolitan area in districts</a></li>
+             <li><a href='https://hri.fi/data/en_GB/dataset/helsingin-liikennevaylat'>City of Helsinki road map</a></li>
+             <li><a href='https://hri.fi/data/en_GB/dataset/asemakaavoilla-suojellut-rakennukset-ja-alueet-helsingissa'>Buildings and areas protected by detailed plans of the City of Helsinki</a></li>
+             <li><a href='https://hri.fi/data/en_GB/dataset/helsingin-kaupungin-puurekisteri'>Urban tree database of the City of Helsinki</a></li>
+             <li><a href='https://hri.fi/data/en_GB/dataset/hsl-n-kaupunkipyoraasemat'>Helsinki Region Transport’s (HSL) city bicycle stations</a></li>
+          <ul>")
       })
     
-    output$note3 <- renderText({
-      "R code https://github.com/tts/walkhki. A desktop version https://github.com/tts/walkinghelsinki"
-      })
+    output$note3 <- renderUI({
+      HTML("<a href='https://github.com/tts/walkhki'>R code of this app</a>.")
+      }, )
  
     
          
