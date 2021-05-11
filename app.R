@@ -286,8 +286,8 @@ shiny::shinyApp(
       })
     
     output$note3 <- renderUI({
-      HTML("<a href='https://github.com/tts/walkhki'>R code of this app</a>.")
-      }, )
+      HTML("<a href='https://github.com/tts/walkhki'>R code of this app</a>, and <a href='http://tuijasonkkila.fi/blog/2021/05/walks-and-biking-in-helsinki/'>a blog post</a>.")
+      })
  
     
          
