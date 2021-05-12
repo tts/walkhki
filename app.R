@@ -52,7 +52,7 @@ shiny::shinyApp(
   
   ui = f7Page(
     
-    waiter::waiter_show_on_load(),
+    # waiter::waiter_show_on_load(),
 
     title = "Walking and biking in Helsinki", 
     preloader = FALSE, 
@@ -79,7 +79,7 @@ shiny::shinyApp(
     f7TabLayout(
       navbar = f7Navbar(
         subNavbar = NULL,
-        title = "Trees, park roads, protected buildings, and bike stations",
+        title = "Walk and bike in Helsinki",
         hairline = TRUE,
         shadow = TRUE,
         bigger = FALSE,
@@ -107,7 +107,7 @@ shiny::shinyApp(
             ),
           
           f7Card(
-            textOutput(outputId = "note1")
+            textOutput(outputId = "note")
           )
         )
       ),
@@ -164,14 +164,36 @@ shiny::shinyApp(
 
                f7Row(
                  f7Col(
-                   # f7Card(
-                   #   textOutput(outputId = "note1")
-                   # ),
                    f7Card(
-                     htmlOutput(outputId = "note2")
-                   ),
+                     f7Text(inputId = "aboutdata", label = "All data via Helsinki Region Infoshare", value = " "),
+                     f7List(
+                       f7ListItem(
+                         f7Link(label = "Metropolitan area in districts", href = "https://hri.fi/data/en_GB/dataset/paakaupunkiseudun-aluejakokartat")
+                       ),
+                       f7ListItem(
+                         f7Link(label = "City of Helsinki road map", href = "https://hri.fi/data/en_GB/dataset/helsingin-liikennevaylat")
+                       ),
+                       f7ListItem(
+                         f7Link(label = "Buildings and areas protected by detailed plans of the City of Helsinki", href = "https://hri.fi/data/en_GB/dataset/asemakaavoilla-suojellut-rakennukset-ja-alueet-helsingissa")
+                       ),
+                       f7ListItem(
+                         f7Link(label = "Urban tree database of the City of Helsinki", href = "https://hri.fi/data/en_GB/dataset/helsingin-kaupungin-puurekisteri")
+                       ),
+                       f7ListItem(
+                         f7Link(label = "Helsinki Region Transport’s (HSL) city bicycle stations", href = "https://hri.fi/data/en_GB/dataset/hsl-n-kaupunkipyoraasemat")
+                       )
+                       )
+                     ),
                    f7Card(
-                     htmlOutput(outputId = "note3")
+                     f7Text(inputId = "aboutother", label = "Code and blog", value = " "),
+                     f7List(
+                       f7ListItem(
+                         f7Link(label = "R code of this app", href="https://github.com/tts/walkhki")
+                       ),
+                       f7ListItem(
+                         f7Link(label = "Blog post", href = "http://tuijasonkkila.fi/blog/2021/05/walks-and-biking-in-helsinki/")
+                       )
+                     )
                    )
                  )
                )
@@ -270,25 +292,9 @@ shiny::shinyApp(
     })
     
     
-    output$note1 <- renderText({
+    output$note <- renderText({
       "Click a yellow bike station to find out the number of available bikes. Note that there are a few new stations opening up in summer 2021 with no info yet."
       })
-    
-    output$note2 <- renderUI({
-      HTML("<p>All data via <a href='https://hri.fi'>Helsinki Region Infoshare</a>:</p>
-           <ul>
-             <li><a href='https://hri.fi/data/en_GB/dataset/paakaupunkiseudun-aluejakokartat'>Metropolitan area in districts</a></li>
-             <li><a href='https://hri.fi/data/en_GB/dataset/helsingin-liikennevaylat'>City of Helsinki road map</a></li>
-             <li><a href='https://hri.fi/data/en_GB/dataset/asemakaavoilla-suojellut-rakennukset-ja-alueet-helsingissa'>Buildings and areas protected by detailed plans of the City of Helsinki</a></li>
-             <li><a href='https://hri.fi/data/en_GB/dataset/helsingin-kaupungin-puurekisteri'>Urban tree database of the City of Helsinki</a></li>
-             <li><a href='https://hri.fi/data/en_GB/dataset/hsl-n-kaupunkipyoraasemat'>Helsinki Region Transport’s (HSL) city bicycle stations</a></li>
-          <ul>")
-      })
-    
-    output$note3 <- renderUI({
-      HTML("<a href='https://github.com/tts/walkhki'>R code of this app</a>, and <a href='http://tuijasonkkila.fi/blog/2021/05/walks-and-biking-in-helsinki/'>a blog post</a>.")
-      })
- 
     
          
     observeEvent(input$dist_marker_click, {
