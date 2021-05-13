@@ -241,34 +241,40 @@ shiny::shinyApp(
     output$dist <- renderLeaflet({
       
      m <- leaflet(sf::st_zm(District())) %>%
-        addTiles() %>% 
-        addPolygons(color = "steelblue2")
+       addTiles() %>% 
+       addPolygons(color = "steelblue2") %>% 
+       addLayersControl(
+         overlayGroups = c("Buildings", "Park roads", "Stations", "Trees"),
+         options = layersControlOptions(collapsed = FALSE)
+       )
       
       if(nrow(Roads()) > 0) {
         m <- m %>%
-          addPolylines(data = sf::st_zm(Roads()), color = "sienna")
+          addPolylines(data = sf::st_zm(Roads()), color = "sienna", group = "Park roads")
       }
       
       if(nrow(Trees()) > 0) {
         m <- m %>%
-          addCircles(data = sf::st_zm(Trees()), color = "springgreen3", label = Trees()$nimi)
+          addCircles(data = sf::st_zm(Trees()), color = "springgreen3", label = Trees()$nimi, group = "Trees")
       }
       
       if(nrow(Buildings()) > 0) {
         m <- m %>%
           addPolygons(data = sf::st_zm(Buildings()), color = "darkorange", 
-                      label = paste0(Buildings()$osoite, " (", Buildings()$laji, ")"))
+                      label = paste0(Buildings()$osoite, " (", Buildings()$laji, ")"),
+                      group = "Buildings")
       }
       
       if(nrow(Stations()) > 0) {
         m <- m %>% 
-          addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6)
+          addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6, group = "Stations")
       }
         
         m
 
       
-    })
+    }
+    )
     
     
     output$bigdist <- renderLeaflet({
