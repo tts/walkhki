@@ -52,8 +52,8 @@ shiny::shinyApp(
   
   ui = f7Page(
     
-    # waiter::waiter_show_on_load(),
-
+    waiter::use_waiter(), 
+    
     title = "Walking and biking in Helsinki", 
     preloader = FALSE, 
     allowPWA = FALSE,
@@ -205,6 +205,11 @@ shiny::shinyApp(
 
   server = function(input, output, session) {
     
+    waiter::waiter_show(
+      color = "#1a291f",
+      html = waiter::spin_fading_circles()
+    )
+
     District <- reactive({
       distr_in_area %>%
         filter(Name.x == input$target)
@@ -229,6 +234,8 @@ shiny::shinyApp(
       bikestations_in_distr_in_area %>% 
         filter(Name.x == input$target)
     })
+    
+    waiter::waiter_hide() 
     
     
     output$dist <- renderLeaflet({
@@ -259,6 +266,7 @@ shiny::shinyApp(
       }
         
         m
+
       
     })
     
