@@ -165,7 +165,7 @@ shiny::shinyApp(
                f7Row(
                  f7Col(
                    f7Card(
-                     f7Text(inputId = "aboutdata", label = "All data via Helsinki Region Infoshare", value = " "),
+                     f7Text(inputId = "aboutdata", label = "All data via Helsinki Region Infoshare, and Helsinki Region Transport", value = " "),
                      f7List(
                        f7ListItem(
                          f7Link(label = "Metropolitan area in districts", href = "https://hri.fi/data/en_GB/dataset/paakaupunkiseudun-aluejakokartat")
@@ -181,6 +181,9 @@ shiny::shinyApp(
                        ),
                        f7ListItem(
                          f7Link(label = "Helsinki Region Transport’s (HSL) city bicycle stations", href = "https://hri.fi/data/en_GB/dataset/hsl-n-kaupunkipyoraasemat")
+                       ),
+                       f7ListItem(
+                         f7Link(label = "Helsinki Region Transport’s (HSL) Digitransit Platform", href = "https://digitransit.fi/en/developers/apis/1-routing-api/bicycling/")
                        )
                        )
                      ),
@@ -207,7 +210,7 @@ shiny::shinyApp(
     
     waiter::waiter_show(
       color = "#1a291f",
-      html = waiter::spin_fading_circles()
+      html = waiter::spin_cube_grid()
     )
 
     District <- reactive({
@@ -281,10 +284,17 @@ shiny::shinyApp(
       
       m2 <- leaflet(sf::st_zm(hki)) %>%
         addTiles() %>%
-        addPolygons(color = "steelblue2")
+        addPolygons(fillColor = "white",
+                    fillOpacity = 0.3,
+                    color = "black",
+                    stroke = TRUE,
+                    weight = 1,
+                    label = hki$Name.x)
       
       m2 <- m2 %>%
-        addPolygons(data = sf::st_zm(District()), color = "red", label = District()$Name.x)
+        addPolygons(data = sf::st_zm(District()), 
+                    color = "red", 
+                    label = District()$Name.x)
       
       
     })
