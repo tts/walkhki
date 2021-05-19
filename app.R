@@ -52,8 +52,6 @@ shiny::shinyApp(
   
   ui = f7Page(
     
-    waiter::use_waiter(), 
-    
     title = "Walking and biking in Helsinki", 
     preloader = FALSE, 
     allowPWA = FALSE,
@@ -207,12 +205,7 @@ shiny::shinyApp(
 
 
   server = function(input, output, session) {
-    
-    waiter::waiter_show(
-      color = "#1a291f",
-      html = waiter::spin_cube_grid()
-    )
-
+  
     District <- reactive({
       distr_in_area %>%
         filter(Name.x == input$target)
@@ -238,10 +231,16 @@ shiny::shinyApp(
         filter(Name.x == input$target)
     })
     
-    waiter::waiter_hide() 
-    
     
     output$dist <- renderLeaflet({
+      
+      withProgress(message = 'Map in progress',
+                   detail = 'This may take a little while...', { 
+                     for (i in 1:15) {
+                       incProgress(1/15)
+                       Sys.sleep(0.25)
+                     }
+                   })
       
      m <- leaflet(sf::st_zm(District())) %>%
        addTiles() %>% 
@@ -272,12 +271,12 @@ shiny::shinyApp(
         m <- m %>% 
           addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6, group = "Stations")
       }
-        
-        m
+     
+     
+     m
 
       
-    }
-    )
+    })
     
     
     output$bigdist <- renderLeaflet({
