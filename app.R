@@ -354,7 +354,8 @@ shiny::shinyApp(
       
       click <- input$dist_marker_click
       
-      req(click)
+      # Exclude the 'I am here' marker which has no group
+      req(click$group)
 
       lo <- formatC(click$lat, digits = 5, format = "f")
       la <- formatC(click$lng, digits = 5, format = "f")
