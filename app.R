@@ -266,7 +266,7 @@ shiny::shinyApp(
     output$dist <- renderLeaflet({
       
       withProgress(message = 'Maps in progress',
-                   detail = 'This takes some seconds...', {
+                   detail = 'This takes a few seconds...', {
                      for (i in 1:15) {
                        incProgress(1/15)
                        Sys.sleep(0.25)
@@ -279,7 +279,7 @@ shiny::shinyApp(
         addLayersControl(
           overlayGroups = c("Buildings", "Park roads", "Stations", "Trees"),
           options = layersControlOptions(collapsed = FALSE)
-        )
+        ) 
       
       if(nrow(Roads()) > 0) {
         m <- m %>%
@@ -354,38 +354,33 @@ shiny::shinyApp(
       
       click <- input$dist_marker_click
       
-      if(is.null(click)){
-        return()
-      } else {
-        
-        lo <- formatC(click$lat, digits = 5, format = "f")
-        la <- formatC(click$lng, digits = 5, format = "f")
-        
-        bike_station_clicked <- Stations() %>%
-          mutate(X = formatC(sf::st_coordinates(.)[,1], digits = 5, format = "f"),
-                 Y = formatC(sf::st_coordinates(.)[,2], digits = 5, format = "f")) %>%
-          filter(X == la & Y == lo) %>%
-          select(ID) %>%
-          sf::st_drop_geometry(.) %>%
-          as.character()
-        
-        res <- httr::POST(url = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql",
-                          body = paste0('{bikeRentalStation(id:"', bike_station_clicked, '"){name bikesAvailable}}'),
-                          httr::add_headers(.headers = c("accept" = "application/json",
-                                                         "Content-Type" = "application/graphql")))
-        
-        json <- jsonlite::fromJSON(httr::content(res, as = "text"))
-        
-        text <- paste0("Bikes available at ", json$data$bikeRentalStation$name, ": ",json$data$bikeRentalStation$bikesAvailable)
-        
-        dist <- leafletProxy("dist")
-        
-        dist %>% clearPopups() %>%
-          addPopups(click$lng, click$lat, text)
+      req(click)
 
-        
-      }
+      lo <- formatC(click$lat, digits = 5, format = "f")
+      la <- formatC(click$lng, digits = 5, format = "f")
       
+      bike_station_clicked <- Stations() %>%
+        mutate(X = formatC(sf::st_coordinates(.)[,1], digits = 5, format = "f"),
+               Y = formatC(sf::st_coordinates(.)[,2], digits = 5, format = "f")) %>%
+        filter(X == la & Y == lo) %>%
+        select(ID) %>%
+        sf::st_drop_geometry(.) %>%
+        as.character()
+      
+      res <- httr::POST(url = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql",
+                        body = paste0('{bikeRentalStation(id:"', bike_station_clicked, '"){name bikesAvailable}}'),
+                        httr::add_headers(.headers = c("accept" = "application/json",
+                                                       "Content-Type" = "application/graphql")))
+      
+      json <- jsonlite::fromJSON(httr::content(res, as = "text"))
+      
+      text <- paste0("Bikes available at ", json$data$bikeRentalStation$name, ": ",json$data$bikeRentalStation$bikesAvailable)
+      
+      dist <- leafletProxy("dist")
+      
+      dist %>% clearPopups() %>%
+        addPopups(click$lng, click$lat, text)
+
     })
     
     
@@ -449,7 +444,7 @@ shiny::shinyApp(
     })
     
 
-    # This never fires if the map is not yet rendered
+    # Add a marker showing location. Note that this never fires if the map is not yet rendered
     observe({
     
       # The map event input$MAPID_center provides the coordinates of the center 
