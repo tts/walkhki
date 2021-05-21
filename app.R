@@ -356,7 +356,7 @@ shiny::shinyApp(
       
       # Exclude the 'I am here' marker which has no group
       req(click$group)
-
+      
       lo <- formatC(click$lat, digits = 5, format = "f")
       la <- formatC(click$lng, digits = 5, format = "f")
       
@@ -427,6 +427,9 @@ shiny::shinyApp(
         filter(Name.x == clicked_district_name)
       
       r$d <- this_district$Name.x
+      # Delete the 'I am here' marker
+      r$lat <- NULL
+      r$long <- NULL
       
     })
     
@@ -450,7 +453,7 @@ shiny::shinyApp(
     
       # The map event input$MAPID_center provides the coordinates of the center 
       # of the currently *visible* map, which means that the map _is_ rendered
-      req(input$dist_center)
+      req(r$lat, input$dist_center)
 
       leafletProxy("dist") %>%
         addMarkers(lat = as.numeric(r$lat), lng = as.numeric(r$long), label = "I am here")
