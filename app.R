@@ -52,6 +52,28 @@ shiny::shinyApp(
   
   ui = f7Page(
     
+    # https://github.com/AugustT/shiny_geolocation
+    # Ask permission to store the user's location
+    tags$script('
+        $(document).ready(function () {
+          navigator.geolocation.getCurrentPosition(onSuccess, onError);
+      
+          function onError (err) {
+          Shiny.onInputChange("geolocation", false);
+          }
+          
+         function onSuccess (position) {
+            setTimeout(function () {
+                var coords = position.coords;
+                console.log(coords.latitude + ", " + coords.longitude);
+                Shiny.onInputChange("geolocation", true);
+                Shiny.onInputChange("lat", coords.latitude);
+                Shiny.onInputChange("long", coords.longitude);
+            }, 1100)
+        }
+        });
+      '),
+    
     title = "Walking and biking in Helsinki", 
     preloader = FALSE, 
     allowPWA = FALSE,
@@ -102,17 +124,17 @@ shiny::shinyApp(
                           choices = districts,
                           selected = "Kluuvi",
                           openIn = "popup")
-            ),
+          ),
           
           f7Card(
             textOutput(outputId = "note")
           )
         )
       ),
- 
-           
+      
+      
       f7Tabs(animated=TRUE, id="tabs", style = c("toolbar"),
-            
+             
              f7Tab(
                tabName = "Map",
                icon = f7Icon("map"),
@@ -159,7 +181,7 @@ shiny::shinyApp(
                tabName = "About",
                icon = f7Icon("question_circle"),
                active = FALSE,
-
+               
                f7Row(
                  f7Col(
                    f7Card(
@@ -183,8 +205,8 @@ shiny::shinyApp(
                        f7ListItem(
                          f7Link(label = "Helsinki Region Transport’s (HSL) Digitransit Platform", href = "https://digitransit.fi/en/developers/apis/1-routing-api/bicycling/")
                        )
-                       )
-                     ),
+                     )
+                   ),
                    f7Card(
                      f7Text(inputId = "aboutother", label = "Code and blog", value = " "),
                      f7List(
@@ -201,11 +223,20 @@ shiny::shinyApp(
              )
       )
     )
-    ),
-
-
-  server = function(input, output, session) {
+  ),
   
+  
+  server = function(input, output, session) {
+    
+    # d = the name of the district a) clicked in the "Where are we?" map, 
+    #     or b) of the user's initial location (if given access to)
+    # lat, long = user's location coordinates
+    
+    r <- reactiveValues(
+      d = NULL,
+      lat = NULL,
+      long = NULL)
+    
     District <- reactive({
       distr_in_area %>%
         filter(Name.x == input$target)
@@ -230,25 +261,25 @@ shiny::shinyApp(
       bikestations_in_distr_in_area %>% 
         filter(Name.x == input$target)
     })
-    
+  
     
     output$dist <- renderLeaflet({
       
-      withProgress(message = 'Map in progress',
-                   detail = 'This may take a little while...', { 
+      withProgress(message = 'Maps in progress',
+                   detail = 'This takes some seconds...', {
                      for (i in 1:15) {
                        incProgress(1/15)
                        Sys.sleep(0.25)
                      }
                    })
       
-     m <- leaflet(sf::st_zm(District())) %>%
-       addTiles() %>% 
-       addPolygons(color = "steelblue2") %>% 
-       addLayersControl(
-         overlayGroups = c("Buildings", "Park roads", "Stations", "Trees"),
-         options = layersControlOptions(collapsed = FALSE)
-       )
+      m <- leaflet(sf::st_zm(District())) %>%
+        addTiles() %>% 
+        addPolygons(color = "steelblue2") %>% 
+        addLayersControl(
+          overlayGroups = c("Buildings", "Park roads", "Stations", "Trees"),
+          options = layersControlOptions(collapsed = FALSE)
+        )
       
       if(nrow(Roads()) > 0) {
         m <- m %>%
@@ -271,12 +302,10 @@ shiny::shinyApp(
         m <- m %>% 
           addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6, group = "Stations")
       }
-     
-     
+      
      m
 
-      
-    })
+     })
     
     
     output$bigdist <- renderLeaflet({
@@ -317,10 +346,11 @@ shiny::shinyApp(
     
     output$note <- renderText({
       "Click a yellow bike station to find out the number of available bikes. Note that there are a few new stations opening up in summer 2021 with no info yet."
-      })
+    })
     
-         
-    observeEvent(input$dist_marker_click, {
+    
+    # Bike station click
+    observeEvent( input$dist_marker_click, {
       
       click <- input$dist_marker_click
       
@@ -352,11 +382,84 @@ shiny::shinyApp(
         
         dist %>% clearPopups() %>%
           addPopups(click$lng, click$lat, text)
+
         
       }
       
     })
     
+    
+    # User's district (if given access to)
+    observeEvent( input$geolocation, {
+      
+      loc_ok <- input$geolocation
+      
+      req(loc_ok == TRUE)
+        
+      la <- formatC(input$lat, digits = 5, format = "f")
+      lo <- formatC(input$long, digits = 5, format = "f")
+      
+      userloc <- data.frame(lat = la, long = lo, stringsAsFactors = FALSE)
+      userloc_sf <- sf::st_as_sf(userloc, coords = c("long","lat"), crs = 4326)
+      
+      her_district_int <- sf::st_intersects(userloc_sf, distr_in_area)
+      her_district_name <- distr_in_area$Name.x[unlist(her_district_int)]
+      
+      r$d <- her_district_name
+      r$lat <- la
+      r$long <- lo
+        
+    })
+    
+    # Is the "Where are we?" map clicked?
+    observeEvent( input$bigdist_shape_click, {
+      
+      dclick <- input$bigdist_shape_click
+      
+      req(dclick)
+      
+      la <- formatC(dclick$lat, digits = 5, format = "f")
+      lo <- formatC(dclick$lng, digits = 5, format = "f")
+      
+      thisloc <- data.frame(long = lo, lat = la, stringsAsFactors = FALSE)
+      thisloc_sf <- sf::st_as_sf(thisloc, coords = c("long","lat"), crs = 4326)
+      
+      clicked_district_int <- sf::st_intersects(thisloc_sf, hki)
+      clicked_district_name <- hki$Name.x[unlist(clicked_district_int)]
+      
+      this_district <- hki %>%
+        filter(Name.x == clicked_district_name)
+      
+      r$d <- this_district$Name.x
+      
+    })
+    
+    # Update the maps and the histogram
+    observeEvent( r$d, {
+        req(r$d != input$target)
+      
+        updateF7SmartSelect(
+          inputId = "target",
+          label = "District",
+          choices = districts,
+          selected = r$d,
+          openIn = "popup"
+        )
+        
+    })
+    
+
+    # This never fires if the map is not yet rendered
+    observe({
+    
+      # The map event input$MAPID_center provides the coordinates of the center 
+      # of the currently *visible* map, which means that the map _is_ rendered
+      req(input$dist_center)
+
+      leafletProxy("dist") %>%
+        addMarkers(lat = as.numeric(r$lat), lng = as.numeric(r$long), label = "I am here")
+
+    })
   }
   
 )
