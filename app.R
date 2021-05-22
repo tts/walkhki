@@ -3,6 +3,8 @@ library(shinyMobile)
 library(leaflet)
 library(tidyverse)
 library(sf)
+library(shinyjs)
+
 
 #----------
 # Districts 
@@ -48,31 +50,44 @@ bikestations_in_distr_in_area <- readRDS("bikestations_in_distr_in_area.RDS")
 # shinyMobile app
 #-----------------
 
-shiny::shinyApp(
-  
-  ui = f7Page(
-    
-    # https://github.com/AugustT/shiny_geolocation
-    # Ask permission to store the user's location
-    tags$script('
-        $(document).ready(function () {
-          navigator.geolocation.getCurrentPosition(onSuccess, onError);
-      
-          function onError (err) {
-          Shiny.onInputChange("geolocation", false);
-          }
-          
-         function onSuccess (position) {
+# https://www.r-bloggers.com/2017/03/4-tricks-for-working-with-r-leaflet-and-shiny/
+# https://github.com/AugustT/shiny_geolocation
+
+jsCode <- 'shinyjs.geoloc = function() {
+
+        var options = {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        };
+                
+        navigator.geolocation.getCurrentPosition(onSuccess, onError);
+        
+        function onError (err) {
+            Shiny.onInputChange("geolocation", false);
+        }
+        
+        function onSuccess (position) {
+        
             setTimeout(function () {
                 var coords = position.coords;
                 console.log(coords.latitude + ", " + coords.longitude);
                 Shiny.onInputChange("geolocation", true);
                 Shiny.onInputChange("lat", coords.latitude);
+                Shiny.onInputChange("accuracy", coords.accuracy);
                 Shiny.onInputChange("long", coords.longitude);
-            }, 1100)
+            }, 5)
+        
         }
-        });
-      '),
+};
+'
+
+shiny::shinyApp(
+  
+  ui = f7Page(
+    
+    useShinyjs(),
+    extendShinyjs(text = jsCode, functions = c("geoloc")),
     
     title = "Walking and biking in Helsinki", 
     preloader = FALSE, 
@@ -154,6 +169,9 @@ shiny::shinyApp(
                icon = f7Icon("location"),
                active = FALSE,
                
+               actionButton(inputId = "geoloc", label = "Show my location", 
+                            width = "20%", onClick ="shinyjs.geoloc()"),
+               
                f7Row(
                  f7Col(
                    f7Card(
@@ -228,14 +246,9 @@ shiny::shinyApp(
   
   server = function(input, output, session) {
     
-    # d = the name of the district a) clicked in the "Where are we?" map, 
-    #     or b) of the user's initial location (if given access to)
-    # lat, long = user's location coordinates
-    
+    # The name of the district clicked in the "Where are we?" map
     r <- reactiveValues(
-      d = NULL,
-      lat = NULL,
-      long = NULL)
+      d = NULL)
     
     District <- reactive({
       distr_in_area %>%
@@ -261,7 +274,7 @@ shiny::shinyApp(
       bikestations_in_distr_in_area %>% 
         filter(Name.x == input$target)
     })
-  
+    
     
     output$dist <- renderLeaflet({
       
@@ -303,9 +316,9 @@ shiny::shinyApp(
           addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6, group = "Stations")
       }
       
-     m
-
-     })
+      m
+      
+    })
     
     
     output$bigdist <- renderLeaflet({
@@ -354,8 +367,8 @@ shiny::shinyApp(
       
       click <- input$dist_marker_click
       
-      # Exclude the 'I am here' marker which has no group
-      req(click$group)
+      # Exclude the 'I am here' marker
+      req(!click$group == "Me")
       
       lo <- formatC(click$lat, digits = 5, format = "f")
       la <- formatC(click$lng, digits = 5, format = "f")
@@ -381,33 +394,16 @@ shiny::shinyApp(
       
       dist %>% clearPopups() %>%
         addPopups(click$lng, click$lat, text)
-
+      
     })
-    
-    
-    # User's district (if given access to)
-    observeEvent( input$geolocation, {
-      
-      loc_ok <- input$geolocation
-      
-      req(loc_ok == TRUE)
-        
-      la <- formatC(input$lat, digits = 5, format = "f")
-      lo <- formatC(input$long, digits = 5, format = "f")
-      
-      userloc <- data.frame(lat = la, long = lo, stringsAsFactors = FALSE)
-      userloc_sf <- sf::st_as_sf(userloc, coords = c("long","lat"), crs = 4326)
-      
-      her_district_int <- sf::st_intersects(userloc_sf, distr_in_area)
-      her_district_name <- distr_in_area$Name.x[unlist(her_district_int)]
-      
-      r$d <- her_district_name
-      r$lat <- la
-      r$long <- lo
-        
+  
+    # When the action button is clicked
+    observeEvent( input$geoloc, {
+      js$geoloc()
     })
-    
-    # Is the "Where are we?" map clicked?
+  
+      
+    # When the "Where are we?" map is clicked
     observeEvent( input$bigdist_shape_click, {
       
       dclick <- input$bigdist_shape_click
@@ -427,38 +423,48 @@ shiny::shinyApp(
         filter(Name.x == clicked_district_name)
       
       r$d <- this_district$Name.x
-      # Delete the 'I am here' marker
-      r$lat <- NULL
-      r$long <- NULL
       
     })
     
     # Update the maps and the histogram
     observeEvent( r$d, {
-        req(r$d != input$target)
+      req(r$d != input$target)
       
-        updateF7SmartSelect(
-          inputId = "target",
-          label = "District",
-          choices = districts,
-          selected = r$d,
-          openIn = "popup"
-        )
-        
+      updateF7SmartSelect(
+        inputId = "target",
+        label = "District",
+        choices = districts,
+        selected = r$d,
+        openIn = "popup"
+      )
+      
     })
     
-
-    # Add a marker showing location. Note that this never fires if the map is not yet rendered
+    # Add a marker showing location. 
+    # Note that this never fires if the map is not yet rendered.
+    # Use the map event input$MAPID_center if needed. It provides the coordinates 
+    # of the center of the currently *visible* map, which means that the map _is_ rendered. 
     observe({
-    
-      # The map event input$MAPID_center provides the coordinates of the center 
-      # of the currently *visible* map, which means that the map _is_ rendered
-      req(r$lat, input$dist_center)
-
+      
+      req(input$lat)
+      
       leafletProxy("dist") %>%
-        addMarkers(lat = as.numeric(r$lat), lng = as.numeric(r$long), label = "I am here")
-
+        addMarkers(lat = as.numeric(input$lat), lng = as.numeric(input$long), label = "I am here", layerId = "Me")
+      
+      leafletProxy("bigdist") %>%
+        addMarkers(lat = as.numeric(input$lat), lng = as.numeric(input$long), label = "I am here", layerId = "Me")
+      
     })
+    
+    # Delete the 'I am here' marker by clicking it 
+    observe({
+      leafletProxy("dist") %>%
+        removeMarker(input$dist_marker_click$id)
+      
+      leafletProxy("bigdist") %>%
+        removeMarker(input$bigdist_marker_click$id)
+    })
+    
   }
   
 )
