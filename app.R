@@ -94,7 +94,7 @@ shiny::shinyApp(
       tags$style(HTML('#geoloc{background-color: #d1ae20}')),
       # https://stackoverflow.com/a/64789171
       tags$style(HTML(".shiny-notification {position:fixed;top: 30%;left: 30%;right: 40%;padding: 1px;text-align: center;background-color: #d1ae20}"))),
-
+    
     title = "Walking and biking in Helsinki", 
     preloader = FALSE, 
     allowPWA = FALSE,
@@ -286,45 +286,41 @@ shiny::shinyApp(
     
     output$dist <- renderLeaflet({
       
-      withProgress(message = 'Loading...',
-                   detail = '', {
-                     for (i in 1:15) {
-                       incProgress(1/15)
-                       Sys.sleep(0.25)
-                     }
-                   })
-      
-      m <- leaflet(sf::st_zm(District())) %>%
-        addTiles() %>% 
-        addPolygons(color = "steelblue2") %>% 
-        addLayersControl(
-          overlayGroups = c("Buildings", "Park roads", "Stations", "Trees"),
-          options = layersControlOptions(collapsed = FALSE)
-        ) 
-      
-      if(nrow(Roads()) > 0) {
-        m <- m %>%
-          addPolylines(data = sf::st_zm(Roads()), color = "sienna", group = "Park roads")
-      }
-      
-      if(nrow(Trees()) > 0) {
-        m <- m %>%
-          addCircles(data = sf::st_zm(Trees()), color = "springgreen3", label = Trees()$nimi, group = "Trees")
-      }
-      
-      if(nrow(Buildings()) > 0) {
-        m <- m %>%
-          addPolygons(data = sf::st_zm(Buildings()), color = "darkorange", 
-                      label = paste0(Buildings()$osoite, " (", Buildings()$laji, ")"),
-                      group = "Buildings")
-      }
-      
-      if(nrow(Stations()) > 0) {
-        m <- m %>% 
-          addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6, group = "Stations")
-      }
-      
-      m
+      withProgress(message = 'Loading...', detail = '', {
+        
+       m <- leaflet(sf::st_zm(District())) %>%
+         addTiles() %>% 
+         addPolygons(color = "steelblue2") %>% 
+         addLayersControl(
+           overlayGroups = c("Buildings", "Park roads", "Stations", "Trees"),
+           options = layersControlOptions(collapsed = FALSE)
+         ) 
+       
+       if(nrow(Roads()) > 0) {
+         m <- m %>%
+           addPolylines(data = sf::st_zm(Roads()), color = "sienna", group = "Park roads")
+       }
+       
+       if(nrow(Trees()) > 0) {
+         m <- m %>%
+           addCircles(data = sf::st_zm(Trees()), color = "springgreen3", label = Trees()$nimi, group = "Trees")
+       }
+       
+       if(nrow(Buildings()) > 0) {
+         m <- m %>%
+           addPolygons(data = sf::st_zm(Buildings()), color = "darkorange", 
+                       label = paste0(Buildings()$osoite, " (", Buildings()$laji, ")"),
+                       group = "Buildings")
+       }
+       
+       if(nrow(Stations()) > 0) {
+         m <- m %>% 
+           addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6, group = "Stations")
+       }
+       
+       m
+       
+       })
       
     })
     
@@ -404,13 +400,13 @@ shiny::shinyApp(
         addPopups(click$lng, click$lat, text)
       
     })
-  
+    
     # When the action button is clicked
     observeEvent( input$geoloc, {
       js$geoloc()
     })
-  
-      
+    
+    
     # When the "Where are we?" map is clicked
     observeEvent( input$bigdist_shape_click, {
       
@@ -451,11 +447,11 @@ shiny::shinyApp(
     
     # Add a marker showing location. 
     # Note that this never fires if the map is not yet rendered.
-    # If needed, require e.g. the map event input$MAPID_center. It provides the coordinates 
+    # If needed, use e.g. the map event input$MAPID_center. It provides the coordinates 
     # of the center of the currently *visible* map, which means that the map _is_ rendered. 
     observe({
       
-      req(input$lat)
+      req(input$lat, input$dist_center, input$bigdist_center)
       
       leafletProxy("dist") %>%
         addMarkers(lat = as.numeric(input$lat), lng = as.numeric(input$long), label = "I am here", layerId = "Me")
