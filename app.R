@@ -296,7 +296,10 @@ shiny::shinyApp(
             overlayGroups = c("Buildings", "Park roads", "Stations", "Trees"),
             options = layersControlOptions(collapsed = FALSE)
           ) %>% 
-          addSearchFeatures(targetGroups = "Trees")
+          addSearchFeatures(targetGroups = "Trees",
+                            options = searchFeaturesOptions(textPlaceholder="Type a tree species", 
+                                                            zoom = 15,
+                                                            moveToLocation = FALSE)) 
         
         if(nrow(Roads()) > 0) {
           m <- m %>%
