@@ -451,7 +451,7 @@ shiny::shinyApp(
     
     # Add a marker showing location. 
     # Note that this never fires if the map is not yet rendered.
-    # If needed, use e.g. the map event input$MAPID_center. It provides the coordinates 
+    # If needed, require e.g. the map event input$MAPID_center. It provides the coordinates 
     # of the center of the currently *visible* map, which means that the map _is_ rendered. 
     observe({
       
