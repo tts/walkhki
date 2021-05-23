@@ -89,6 +89,12 @@ shiny::shinyApp(
     useShinyjs(),
     extendShinyjs(text = jsCode, functions = c("geoloc")),
     
+    tags$head(
+      tags$style(HTML(":root {--f7-theme-color: #d1ae20}")),
+      tags$style(HTML('#geoloc{background-color: #d1ae20}')),
+      # https://stackoverflow.com/a/64789171
+      tags$style(HTML(".shiny-notification {position:fixed;top: 30%;left: 30%;right: 40%;padding: 1px;text-align: center;background-color: #d1ae20}"))),
+
     title = "Walking and biking in Helsinki", 
     preloader = FALSE, 
     allowPWA = FALSE,
@@ -148,7 +154,7 @@ shiny::shinyApp(
       ),
       
       
-      f7Tabs(animated=TRUE, id="tabs", style = c("toolbar"),
+      f7Tabs(animated=FALSE, id="tabs", style = c("toolbar"),
              
              f7Tab(
                tabName = "Map",
@@ -169,11 +175,13 @@ shiny::shinyApp(
                icon = f7Icon("location"),
                active = FALSE,
                
-               actionButton(inputId = "geoloc", label = "Show my location", 
-                            width = "20%", onClick ="shinyjs.geoloc()"),
-               
                f7Row(
                  f7Col(
+                   f7Card(
+                     actionButton(inputId = "geoloc", label = "Show my location", 
+                                  width = "30%", icon = icon("map-marker-alt"),
+                                  onClick ="shinyjs.geoloc()")
+                   ),
                    f7Card(
                      leafletOutput(outputId = "bigdist")
                    )
@@ -278,8 +286,8 @@ shiny::shinyApp(
     
     output$dist <- renderLeaflet({
       
-      withProgress(message = 'Maps in progress',
-                   detail = 'This takes a few seconds...', {
+      withProgress(message = 'Loading...',
+                   detail = '', {
                      for (i in 1:15) {
                        incProgress(1/15)
                        Sys.sleep(0.25)
@@ -426,7 +434,8 @@ shiny::shinyApp(
       
     })
     
-    # Update the maps and the histogram
+    # Update the maps and the histogram when the 'Where are we?' map is clicked,
+    # or when a new district is chosen from the list
     observeEvent( r$d, {
       req(r$d != input$target)
       
@@ -442,7 +451,7 @@ shiny::shinyApp(
     
     # Add a marker showing location. 
     # Note that this never fires if the map is not yet rendered.
-    # Use the map event input$MAPID_center if needed. It provides the coordinates 
+    # If needed, use e.g. the map event input$MAPID_center. It provides the coordinates 
     # of the center of the currently *visible* map, which means that the map _is_ rendered. 
     observe({
       
