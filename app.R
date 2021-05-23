@@ -1,6 +1,7 @@
 library(shiny)
 library(shinyMobile)
 library(leaflet)
+library(leaflet.extras)
 library(tidyverse)
 library(sf)
 library(shinyjs)
@@ -95,7 +96,7 @@ shiny::shinyApp(
       # https://stackoverflow.com/a/64789171
       tags$style(HTML(".shiny-notification {position:fixed;top: 30%;left: 30%;right: 40%;padding: 1px;text-align: center;background-color: #d1ae20}"))),
     
-    title = "Walking and biking in Helsinki", 
+    title = "Walk and bike in Helsinki", 
     preloader = FALSE, 
     allowPWA = FALSE,
     
@@ -288,39 +289,40 @@ shiny::shinyApp(
       
       withProgress(message = 'Loading...', detail = '', {
         
-       m <- leaflet(sf::st_zm(District())) %>%
-         addTiles() %>% 
-         addPolygons(color = "steelblue2") %>% 
-         addLayersControl(
-           overlayGroups = c("Buildings", "Park roads", "Stations", "Trees"),
-           options = layersControlOptions(collapsed = FALSE)
-         ) 
-       
-       if(nrow(Roads()) > 0) {
-         m <- m %>%
-           addPolylines(data = sf::st_zm(Roads()), color = "sienna", group = "Park roads")
-       }
-       
-       if(nrow(Trees()) > 0) {
-         m <- m %>%
-           addCircles(data = sf::st_zm(Trees()), color = "springgreen3", label = Trees()$nimi, group = "Trees")
-       }
-       
-       if(nrow(Buildings()) > 0) {
-         m <- m %>%
-           addPolygons(data = sf::st_zm(Buildings()), color = "darkorange", 
-                       label = paste0(Buildings()$osoite, " (", Buildings()$laji, ")"),
-                       group = "Buildings")
-       }
-       
-       if(nrow(Stations()) > 0) {
-         m <- m %>% 
-           addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6, group = "Stations")
-       }
-       
-       m
-       
-       })
+        m <- leaflet(sf::st_zm(District())) %>%
+          addTiles() %>% 
+          addPolygons(color = "steelblue2") %>% 
+          addLayersControl(
+            overlayGroups = c("Buildings", "Park roads", "Stations", "Trees"),
+            options = layersControlOptions(collapsed = FALSE)
+          ) %>% 
+          addSearchFeatures(targetGroups = "Trees")
+        
+        if(nrow(Roads()) > 0) {
+          m <- m %>%
+            addPolylines(data = sf::st_zm(Roads()), color = "sienna", group = "Park roads")
+        }
+        
+        if(nrow(Trees()) > 0) {
+          m <- m %>%
+            addCircles(data = sf::st_zm(Trees()), color = "springgreen3", label = Trees()$nimi, group = "Trees")
+        }
+        
+        if(nrow(Buildings()) > 0) {
+          m <- m %>%
+            addPolygons(data = sf::st_zm(Buildings()), color = "darkorange", 
+                        label = paste0(Buildings()$osoite, " (", Buildings()$laji, ")"),
+                        group = "Buildings")
+        }
+        
+        if(nrow(Stations()) > 0) {
+          m <- m %>% 
+            addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6, group = "Stations")
+        }
+        
+        m
+        
+      })
       
     })
     
