@@ -31,6 +31,10 @@ distr_in_area <- st_join(st_buffer(areas_small, dist = 0),
 distr_in_area <- distr_in_area %>% 
   st_transform(crs = 4326)
 
+# Test: adding ID
+# distr_in_area <- distr_in_area %>% 
+#  mutate(id = as.character(row_number()))
+
 write_rds(distr_in_area, "distr_in_area.RDS")
 
 #-----------
@@ -84,6 +88,7 @@ build <- buildp %>%
 
 build_stats <- build %>% 
   st_drop_geometry() %>% 
+  filter(!is.na(laji) | laji!="6") %>% 
   group_by(laji) %>% 
   summarise(count = n()) %>% 
   arrange(desc(count))
@@ -102,6 +107,22 @@ stations <- stations %>%
   rename(Paikkoja = Kapasiteet) %>% 
   select(Nimi, ID, Osoite, Paikkoja) %>%
   st_transform(crs = 4326) 
+
+#----------------------
+# Bike accidents 2020
+#----------------------
+baseurl <- "http://geo.stat.fi/geoserver/tieliikenne/wfs?"
+wfs_request <- "request=GetFeature&service=WFS&version=2.0.0&typeName=tieliikenne:tieliikenne_2020&outputFormat=json"
+accidents_wfs <- paste0(baseurl,wfs_request)
+accidents <- st_read(accidents_wfs)
+
+# https://www.paikkatietohakemisto.fi/geonetwork/srv/fin/catalog.search#/metadata/de71e0a1-4516-4d50-bd54-e384e5174546
+bike_accidents <- accidents %>% 
+  filter(lkmpp > 0)
+
+b_acc <- bike_accidents %>% 
+  select(kkonn, kello, lkmpp, vakav, onntyyppi, bbox, geometry) %>% 
+  st_transform(crs = 4326)
 
 #----------------------
 # Join info by district
@@ -123,8 +144,10 @@ bikestations_in_distr_in_area <- st_join(stations, distr_in_area)
 bikestations_in_distr_in_area <- bikestations_in_distr_in_area %>% 
   select(-Description.x, -Description.y, -Name.y)
 
-write_rds(trees_in_distr_in_area, "trees_in_distr_in_area.RDS")
-write_rds(roads_in_distr_in_area, "roads_in_distr_in_area.RDS")
-write_rds(prot_build_in_distr_in_area, "prot_build_in_distr_in_area.RDS")
-write_rds(bikestations_in_distr_in_area, "bikestations_in_distr_in_area.RDS")
+b_acc_in_distr_in_area <- st_join(b_acc, distr_in_area)
 
+write_rds(trees_in_distr_in_area, "trees_in_distr_in_area_latest.RDS")
+write_rds(roads_in_distr_in_area, "roads_in_distr_in_area_latest.RDS")
+write_rds(prot_build_in_distr_in_area, "prot_build_in_distr_in_area_latest.RDS")
+write_rds(bikestations_in_distr_in_area, "bikestations_in_distr_in_area_latest.RDS")
+write_rds(b_acc_in_distr_in_area, "b_acc_in_distr_in_area.RDS")
