@@ -1,7 +1,6 @@
 library(shiny)
 library(shinyMobile)
 library(leaflet)
-library(leaflet.extras)
 library(tidyverse)
 library(sf)
 library(shinyjs)
@@ -32,20 +31,26 @@ hki <- distr_in_area %>%
 # Park roads and trees
 #------------------------
 
-roads_in_distr_in_area <- readRDS("roads_in_distr_in_area.RDS")
-trees_in_distr_in_area <- readRDS("trees_in_distr_in_area.RDS")
+roads_in_distr_in_area <- readRDS("roads_in_distr_in_area_latest.RDS")
+trees_in_distr_in_area <- readRDS("trees_in_distr_in_area_latest.RDS")
 
 #---------------------
 # Protected buildings
 #---------------------
 
-prot_build_in_distr_in_area <- readRDS("prot_build_in_distr_in_area.RDS")
+prot_build_in_distr_in_area <- readRDS("prot_build_in_distr_in_area_latest.RDS")
 
 #-------------------
 # City bike stations
 #-------------------
 
-bikestations_in_distr_in_area <- readRDS("bikestations_in_distr_in_area.RDS")
+bikestations_in_distr_in_area <- readRDS("bikestations_in_distr_in_area_latest.RDS")
+
+#--------------------
+# Bike accidents 2020
+#--------------------
+
+b_acc_in_distr_in_area <- readRDS("b_acc_in_distr_in_area.RDS")
 
 #-----------------
 # shinyMobile app
@@ -149,7 +154,7 @@ shiny::shinyApp(
           ),
           
           f7Card(
-            textOutput(outputId = "note")
+            htmlOutput(outputId = "note")
           )
         )
       ),
@@ -212,7 +217,7 @@ shiny::shinyApp(
                f7Row(
                  f7Col(
                    f7Card(
-                     f7Text(inputId = "aboutdata", label = "All data via Helsinki Region Infoshare, and Helsinki Region Transport", value = " "),
+                     f7Text(inputId = "aboutdata", label = "Data by Helsinki Region Infoshare, Helsinki Region Transport, and Statistics Finland", value = " "),
                      f7List(
                        f7ListItem(
                          f7Link(label = "Metropolitan area in districts", href = "https://hri.fi/data/en_GB/dataset/paakaupunkiseudun-aluejakokartat")
@@ -231,6 +236,9 @@ shiny::shinyApp(
                        ),
                        f7ListItem(
                          f7Link(label = "Helsinki Region Transport’s (HSL) Digitransit Platform", href = "https://digitransit.fi/en/developers/apis/1-routing-api/bicycling/")
+                       ),
+                       f7ListItem(
+                         f7Link(label = "Road traffic accidents 2020", href = "https://www.paikkatietohakemisto.fi/geonetwork/srv/eng/catalog.search#/metadata/de71e0a1-4516-4d50-bd54-e384e5174546")
                        )
                      )
                    ),
@@ -284,6 +292,10 @@ shiny::shinyApp(
         filter(Name.x == input$target)
     })
     
+    Accidents <- reactive({
+      b_acc_in_distr_in_area %>% 
+        filter(Name.x == input$target)
+    })
     
     output$dist <- renderLeaflet({
       
@@ -293,13 +305,9 @@ shiny::shinyApp(
           addTiles() %>% 
           addPolygons(color = "steelblue2") %>% 
           addLayersControl(
-            overlayGroups = c("Buildings", "Park roads", "Stations", "Trees"),
+            overlayGroups = c("Bike accidents", "Bike stations", "Buildings", "Park roads", "Trees"),
             options = layersControlOptions(collapsed = FALSE)
-          ) %>% 
-          addSearchFeatures(targetGroups = "Trees",
-                            options = searchFeaturesOptions(textPlaceholder="Type a tree species", 
-                                                            zoom = 15,
-                                                            moveToLocation = FALSE)) 
+          ) 
         
         if(nrow(Roads()) > 0) {
           m <- m %>%
@@ -320,7 +328,15 @@ shiny::shinyApp(
         
         if(nrow(Stations()) > 0) {
           m <- m %>% 
-            addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6, group = "Stations")
+            addCircleMarkers(data = sf::st_zm(Stations()), color = "yellow", weight = 3, opacity = 0.6, group = "Bike stations")
+        }
+        
+        if(nrow(Accidents()) > 0) {
+          m <- m %>%
+            addCircleMarkers(data = sf::st_zm(Accidents()), color = "red", 
+                             radius = 8, weight = 3, opacity = 0.6,
+                       label = paste0(Accidents()$lkmpp, " bike(s) in accident ", Accidents()$kkonn, "/2020 ", 
+                                      " at ", Accidents()$kello), group = "Bike accidents")
         }
         
         m
@@ -367,9 +383,11 @@ shiny::shinyApp(
     
     
     output$note <- renderText({
-      "Click a yellow bike station to find out the number of available bikes. Note that there are a few new stations opening up in summer 2021 with no info yet."
+     paste0("Click a <font color=\"yellow\">yellow</font> bike station to find out the number of available bikes there. ", 
+            "<br/><br/>",
+            "<font color=\"red\">Red</font> circles denote those traffic accidents in 2020 which involved one or more bikes.")
     })
-    
+  
     
     # Bike station click
     observeEvent( input$dist_marker_click, {
