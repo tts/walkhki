@@ -144,10 +144,13 @@ bikestations_in_distr_in_area <- st_join(stations, distr_in_area)
 bikestations_in_distr_in_area <- bikestations_in_distr_in_area %>% 
   select(-Description.x, -Description.y, -Name.y)
 
-b_acc_in_distr_in_area <- st_join(b_acc, distr_in_area)
+b_acc <- st_join(b_acc, distr_in_area) %>% 
+  filter(!is.na(Name.x)) %>% 
+  mutate(severity = ifelse(vakav == 1, "death",
+                           ifelse(vakav == 2, "injured", "severely injured")))
 
 write_rds(trees_in_distr_in_area, "trees_in_distr_in_area_latest.RDS")
 write_rds(roads_in_distr_in_area, "roads_in_distr_in_area_latest.RDS")
 write_rds(prot_build_in_distr_in_area, "prot_build_in_distr_in_area_latest.RDS")
 write_rds(bikestations_in_distr_in_area, "bikestations_in_distr_in_area_latest.RDS")
-write_rds(b_acc_in_distr_in_area, "b_acc_in_distr_in_area.RDS")
+write_rds(b_acc, "b_acc.RDS")
