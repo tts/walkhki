@@ -1,6 +1,7 @@
 library(shiny)
 library(shinyMobile)
 library(leaflet)
+#library(leaflet.extras)
 library(tidyverse)
 library(sf)
 library(shinyjs)
@@ -50,7 +51,11 @@ bikestations_in_distr_in_area <- readRDS("bikestations_in_distr_in_area_latest.R
 # Bike accidents 2020
 #--------------------
 
-b_acc_in_distr_in_area <- readRDS("b_acc_in_distr_in_area.RDS")
+b_acc <- readRDS("b_acc.RDS")
+# b_acc <- b_acc_in_distr_in_area %>% 
+#   filter(!is.na(Name.x)) %>% 
+#   mutate(severity = ifelse(vakav == 1, "death",
+#                            ifelse(vakav == 2, "injured", "severely injured")))
 
 #-----------------
 # shinyMobile app
@@ -88,7 +93,9 @@ jsCode <- 'shinyjs.geoloc = function() {
 };
 '
 
+
 shiny::shinyApp(
+  
   
   ui = f7Page(
     
@@ -195,15 +202,29 @@ shiny::shinyApp(
                )
              ),
              
+             # f7Tab(
+             #   tabName = "Park roads",
+             #   icon = f7Icon("speedometer"),
+             #   active = FALSE,
+             #   
+             #   f7Row(
+             #     f7Col(
+             #       f7Card(
+             #         leafletOutput(outputId = "hist")
+             #       )
+             #     )
+             #   )
+             # ),
+             
              f7Tab(
-               tabName = "Park roads",
-               icon = f7Icon("speedometer"),
+               tabName = "Bike accidents in 2020",
+               icon = f7Icon("exclamationmark_triangle"),
                active = FALSE,
                
                f7Row(
                  f7Col(
                    f7Card(
-                     plotOutput(outputId = "hist")
+                     leafletOutput(outputId = "b_a")
                    )
                  )
                )
@@ -263,6 +284,11 @@ shiny::shinyApp(
   
   server = function(input, output, session) {
     
+    pal <- colorFactor(
+      palette = c("black", "red", "purple"),
+      domain = b_acc$vakav
+    )
+    
     # The name of the district clicked in the "Where are we?" map
     r <- reactiveValues(
       d = NULL)
@@ -293,7 +319,7 @@ shiny::shinyApp(
     })
     
     Accidents <- reactive({
-      b_acc_in_distr_in_area %>% 
+      b_acc %>% 
         filter(Name.x == input$target)
     })
     
@@ -308,6 +334,11 @@ shiny::shinyApp(
             overlayGroups = c("Bike accidents", "Bike stations", "Buildings", "Park roads", "Trees"),
             options = layersControlOptions(collapsed = FALSE)
           ) 
+          # %>% 
+          # addSearchFeatures(targetGroups = "Trees",
+          #                  options = searchFeaturesOptions(textPlaceholder="Type a tree species", 
+          #                                                  zoom = 15,
+          #                                                  moveToLocation = FALSE)) 
         
         if(nrow(Roads()) > 0) {
           m <- m %>%
@@ -333,10 +364,12 @@ shiny::shinyApp(
         
         if(nrow(Accidents()) > 0) {
           m <- m %>%
-            addCircleMarkers(data = sf::st_zm(Accidents()), color = "red", 
+            addCircleMarkers(data = sf::st_zm(Accidents()), 
+                             color = ~pal(vakav), 
                              radius = 8, weight = 3, opacity = 0.6,
-                       label = paste0(Accidents()$lkmpp, " bike(s) in accident ", Accidents()$kkonn, "/2020 ", 
-                                      " at ", Accidents()$kello), group = "Bike accidents")
+                       label = paste0(Accidents()$lkmpp, " bike(s) in accident ", Accidents()$kkonn, 
+                                      "/2020 at ", Accidents()$kello, ". Outcome: ", Accidents()$severity), 
+                       group = "Bike accidents")
         }
         
         m
@@ -366,18 +399,34 @@ shiny::shinyApp(
     })
     
     
-    output$hist <- renderPlot({
+    # output$hist <- renderPlot({
+    #   
+    #   if(nrow(Roads()) > 0) {
+    #     p <- hist(Roads()$length_n,
+    #               breaks = 20,
+    #               main = paste0("Park road lengths in ", input$target),
+    #               xlab = "m",
+    #               ylab = "Count",
+    #               las = 1)
+    #     p
+    #     
+    #   }
+    #   
+    # })
+    
+    output$b_a <- renderLeaflet({
       
-      if(nrow(Roads()) > 0) {
-        p <- hist(Roads()$length_n,
-                  breaks = 20,
-                  main = paste0("Park road lengths in ", input$target),
-                  xlab = "m",
-                  ylab = "Count",
-                  las = 1)
-        p
+      m_b <- leaflet(sf::st_zm(hki)) %>%
+        addTiles() %>%
+        addCircleMarkers(data = sf::st_zm(b_acc),
+                         color = ~pal(vakav), 
+                         radius = 3, weight = 3, opacity = 0.6,
+                         label = paste0(b_acc$lkmpp, 
+                                        " bike(s) in accident ", b_acc$kkonn,
+                                        "/2020 at ", b_acc$kello,
+                                        ". Outcome: ", b_acc$severity))
         
-      }
+      m_b
       
     })
     
@@ -385,7 +434,7 @@ shiny::shinyApp(
     output$note <- renderText({
      paste0("Click a <font color=\"yellow\">yellow</font> bike station to find out the number of available bikes there. ", 
             "<br/><br/>",
-            "<font color=\"red\">Red</font> circles denote those traffic accidents in 2020 which involved one or more bikes.")
+            "Circles in other colors denote those traffic accidents in 2020 which involved one or more bikes. See label for more info.")
     })
   
     
