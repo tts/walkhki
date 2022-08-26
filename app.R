@@ -46,9 +46,9 @@ prot_build_in_distr_in_area <- readRDS("prot_build_in_distr_in_area_latest.RDS")
 
 bikestations_in_distr_in_area <- readRDS("bikestations_in_distr_in_area_latest.RDS")
 
-#--------------------
+#-------------------------
 # Bike accidents 2016-2020
-#--------------------
+#-------------------------
 
 b_acc <- readRDS("b_acc.RDS")
 
@@ -309,13 +309,23 @@ shiny::shinyApp(
       withProgress(message = 'Loading...', detail = '', {
         
         m <- leaflet(sf::st_zm(District())) %>%
-          addTiles() %>% 
+          addProviderTiles(
+            "OpenStreetMap",
+            group = "OpenStreetMap"
+          ) %>%
+          addProviderTiles(
+            "Stamen.Toner",
+            group = "Stamen.Toner"
+          ) %>%
           addPolygons(color = "steelblue2") %>% 
           addLayersControl(
-            overlayGroups = c("Bike accidents", "Bike stations", "Buildings", "Park roads", "Trees"),
-            options = layersControlOptions(collapsed = FALSE)
+            baseGroups = c(
+              "OpenStreetMap", "Stamen.Toner"
+            ),
+            overlayGroups = c("Bike accidents", "Bike stations", 
+                              "Buildings", "Park roads", "Trees")
           ) 
-        
+         
         if(nrow(Roads()) > 0) {
           m <- m %>%
             addPolylines(data = sf::st_zm(Roads()), color = "sienna", group = "Park roads")
@@ -359,7 +369,7 @@ shiny::shinyApp(
     output$bigdist <- renderLeaflet({
       
       m2 <- leaflet(sf::st_zm(hki)) %>%
-        addTiles() %>%
+        addTiles() %>% 
         addPolygons(fillColor = "white",
                     fillOpacity = 0.3,
                     color = "black",
@@ -369,39 +379,56 @@ shiny::shinyApp(
       
       m2 <- m2 %>%
         addPolygons(data = sf::st_zm(District()), 
-                    color = "red", 
+                    color = "black", 
                     label = District()$Name.x)
       
       
     })
     
-    
+  
     output$b_a <- renderLeaflet({
       
-      m_b <- leaflet(sf::st_zm(hki)) %>%
-        addTiles() %>%
-        addCircleMarkers(data = sf::st_zm(b_acc),
-                         color = ~pal(severity), 
-                         radius = 3, weight = 3, opacity = 0.6,
-                         label = paste0(b_acc$lkmpp, 
-                                        " bike(s) in accident ", 
-                                        b_acc$kkonn, "/", b_acc$vvonn, 
-                                        " at ", b_acc$kello, 
-                                        ". Outcome: ", b_acc$severity),
-                         ) %>% 
-        addLegend(pal = pal, values = ~b_acc$severity, opacity = 0.6,
-                  title = "Outcome")
-      
+      withProgress(message = 'Loading...', detail = '', {
         
-      m_b
+        m_b <- leaflet(sf::st_zm(hki)) %>%
+          addProviderTiles(
+            "OpenStreetMap",
+            group = "OpenStreetMap"
+          ) %>%
+          addProviderTiles(
+            "Stamen.Toner",
+            group = "Stamen.Toner"
+          ) %>%
+          addCircleMarkers(data = sf::st_zm(b_acc),
+                           color = ~pal(severity), 
+                           radius = 3, weight = 3, opacity = 0.6,
+                           label = paste0(b_acc$lkmpp, 
+                                          " bike(s) in accident ", 
+                                          b_acc$kkonn, "/", b_acc$vvonn, 
+                                          " at ", b_acc$kello, 
+                                          ". Outcome: ", b_acc$severity)
+                           ) %>% 
+          addLayersControl(
+            baseGroups = c(
+              "OpenStreetMap", "Stamen.Toner"
+            )
+          ) %>% 
+          addLegend(pal = pal, values = ~b_acc$severity, opacity = 0.6,
+                    title = "Outcome")
+        
+        m_b
+      
+      })
       
     })
     
     
     output$note <- renderText({
-     paste0("Click a <font color=\"yellow\">yellow</font> bike station to find out the number of available bikes there. ", 
+     paste0("Click a <font color=\"yellow\">yellow</font> bike station to find out the number of available Helsinki city bikes there. ", 
             "<br/><br/>",
-            "Circles in other colors denote those traffic accidents in 2016-2020 which involved one or more bikes. See label for more info.")
+            "Circles in other colors show those traffic accidents in 2016-2020 which involved one or more bikes. See label for more info.",
+            "<br/><br/>",
+            "The default detail map is about the district of Kluuvi. Choose another district from the dropdown list above, or by clicking an area in the tab <i>Where are we?</i>")
     })
   
     
