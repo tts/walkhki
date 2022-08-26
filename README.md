@@ -1,3 +1,3 @@
 # walkhki
 
-Park roads, planted trees, protected buildings, and City Bike stations in Helsinki. A mobile friendly Shiny app https://ttso.shinyapps.io/walkhki. 
+Park roads, planted trees, protected buildings, City Bike stations, and past bike accidents in Helsinki. A mobile friendly Shiny app https://ttso.shinyapps.io/walkhki. 
