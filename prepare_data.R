@@ -108,20 +108,18 @@ stations <- stations %>%
   select(Nimi, ID, Osoite, Paikkoja) %>%
   st_transform(crs = 4326) 
 
-#----------------------
-# Bike accidents 2020
-#----------------------
+#-------------------------
+# Bike accidents 2016-2020
+#-------------------------
 baseurl <- "http://geo.stat.fi/geoserver/tieliikenne/wfs?"
-wfs_request <- "request=GetFeature&service=WFS&version=2.0.0&typeName=tieliikenne:tieliikenne_2020&outputFormat=json"
+wfs_request <- "request=GetFeature&service=WFS&version=2.0.0&typeName=tieliikenne:tieliikenne_2016,tieliikenne:tieliikenne_2017,tieliikenne:tieliikenne_2018,tieliikenne:tieliikenne_2019,tieliikenne:tieliikenne_2020&outputFormat=json"
 accidents_wfs <- paste0(baseurl,wfs_request)
 accidents <- st_read(accidents_wfs)
 
 # https://www.paikkatietohakemisto.fi/geonetwork/srv/fin/catalog.search#/metadata/de71e0a1-4516-4d50-bd54-e384e5174546
 bike_accidents <- accidents %>% 
-  filter(lkmpp > 0)
-
-b_acc <- bike_accidents %>% 
-  select(kkonn, kello, lkmpp, vakav, onntyyppi, bbox, geometry) %>% 
+  filter(lkmpp > 0) %>% 
+  select(id, vvonn, kkonn, kello, lkmpp, vakav, onntyyppi, bbox, geometry) %>% 
   st_transform(crs = 4326)
 
 #----------------------
@@ -144,7 +142,7 @@ bikestations_in_distr_in_area <- st_join(stations, distr_in_area)
 bikestations_in_distr_in_area <- bikestations_in_distr_in_area %>% 
   select(-Description.x, -Description.y, -Name.y)
 
-b_acc <- st_join(b_acc, distr_in_area) %>% 
+b_acc <- st_join(bike_accidents, distr_in_area) %>% 
   filter(!is.na(Name.x)) %>% 
   mutate(severity = ifelse(vakav == 1, "death",
                            ifelse(vakav == 2, "injured", "severely injured")))
