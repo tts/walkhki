@@ -47,7 +47,7 @@ prot_build_in_distr_in_area <- readRDS("prot_build_in_distr_in_area_latest.RDS")
 bikestations_in_distr_in_area <- readRDS("bikestations_in_distr_in_area_latest.RDS")
 
 #--------------------
-# Bike accidents 2020
+# Bike accidents 2016-2020
 #--------------------
 
 b_acc <- readRDS("b_acc.RDS")
@@ -103,7 +103,7 @@ shiny::shinyApp(
       # https://stackoverflow.com/a/64789171
       tags$style(HTML(".shiny-notification {position:fixed;top: 30%;left: 30%;right: 40%;padding: 1px;text-align: center;background-color: #d1ae20}"))),
     
-    title = "Walk and bike in Helsinki", 
+    title = "Walk and bike (but watch out)", 
     preloader = FALSE, 
     allowPWA = FALSE,
     
@@ -128,7 +128,7 @@ shiny::shinyApp(
     f7TabLayout(
       navbar = f7Navbar(
         subNavbar = NULL,
-        title = "Walk and bike in Helsinki",
+        title = "Walk and bike (but watch out)",
         hairline = TRUE,
         shadow = TRUE,
         bigger = FALSE,
@@ -197,22 +197,8 @@ shiny::shinyApp(
                )
              ),
              
-             # f7Tab(
-             #   tabName = "Park roads",
-             #   icon = f7Icon("speedometer"),
-             #   active = FALSE,
-             #   
-             #   f7Row(
-             #     f7Col(
-             #       f7Card(
-             #         leafletOutput(outputId = "hist")
-             #       )
-             #     )
-             #   )
-             # ),
-             
              f7Tab(
-               tabName = "Bike accidents (2020)",
+               tabName = "Bike accidents",
                icon = f7Icon("exclamationmark_triangle"),
                active = FALSE,
                
@@ -254,7 +240,7 @@ shiny::shinyApp(
                          f7Link(label = "Helsinki Region Transport’s (HSL) Digitransit Platform", href = "https://digitransit.fi/en/developers/apis/1-routing-api/bicycling/")
                        ),
                        f7ListItem(
-                         f7Link(label = "Road traffic accidents 2020", href = "https://www.paikkatietohakemisto.fi/geonetwork/srv/eng/catalog.search#/metadata/de71e0a1-4516-4d50-bd54-e384e5174546")
+                         f7Link(label = "Road traffic accidents 2016-2020", href = "https://www.paikkatietohakemisto.fi/geonetwork/srv/eng/catalog.search#/metadata/de71e0a1-4516-4d50-bd54-e384e5174546")
                        )
                      )
                    ),
@@ -281,7 +267,7 @@ shiny::shinyApp(
     
     pal <- colorFactor(
       palette = c("black", "purple", "red"),
-      domain = b_acc$vakav
+      domain = b_acc$severity
     )
     
     # The name of the district clicked in the "Where are we?" map
@@ -329,11 +315,6 @@ shiny::shinyApp(
             overlayGroups = c("Bike accidents", "Bike stations", "Buildings", "Park roads", "Trees"),
             options = layersControlOptions(collapsed = FALSE)
           ) 
-          # %>% 
-          # addSearchFeatures(targetGroups = "Trees",
-          #                  options = searchFeaturesOptions(textPlaceholder="Type a tree species", 
-          #                                                  zoom = 15,
-          #                                                  moveToLocation = FALSE)) 
         
         if(nrow(Roads()) > 0) {
           m <- m %>%
@@ -360,10 +341,11 @@ shiny::shinyApp(
         if(nrow(Accidents()) > 0) {
           m <- m %>%
             addCircleMarkers(data = sf::st_zm(Accidents()), 
-                             color = ~pal(vakav), 
+                             color = ~pal(severity), 
                              radius = 8, weight = 3, opacity = 0.6,
-                       label = paste0(Accidents()$lkmpp, " bike(s) in accident ", Accidents()$kkonn, 
-                                      "/2020 at ", Accidents()$kello, ". Outcome: ", Accidents()$severity), 
+                       label = paste0(Accidents()$lkmpp, " bike(s) in accident ", 
+                                      Accidents()$kkonn, "/", Accidents()$vvonn, 
+                                      " at ", Accidents()$kello, ". Outcome: ", Accidents()$severity), 
                        group = "Bike accidents")
         }
         
@@ -394,32 +376,22 @@ shiny::shinyApp(
     })
     
     
-    # output$hist <- renderPlot({
-    #   
-    #   if(nrow(Roads()) > 0) {
-    #     p <- hist(Roads()$length_n,
-    #               breaks = 20,
-    #               main = paste0("Park road lengths in ", input$target),
-    #               xlab = "m",
-    #               ylab = "Count",
-    #               las = 1)
-    #     p
-    #     
-    #   }
-    #   
-    # })
-    
     output$b_a <- renderLeaflet({
       
       m_b <- leaflet(sf::st_zm(hki)) %>%
         addTiles() %>%
         addCircleMarkers(data = sf::st_zm(b_acc),
-                         color = ~pal(vakav), 
+                         color = ~pal(severity), 
                          radius = 3, weight = 3, opacity = 0.6,
                          label = paste0(b_acc$lkmpp, 
-                                        " bike(s) in accident ", b_acc$kkonn,
-                                        "/2020 at ", b_acc$kello,
-                                        ". Outcome: ", b_acc$severity))
+                                        " bike(s) in accident ", 
+                                        b_acc$kkonn, "/", b_acc$vvonn, 
+                                        " at ", b_acc$kello, 
+                                        ". Outcome: ", b_acc$severity),
+                         ) %>% 
+        addLegend(pal = pal, values = ~b_acc$severity, opacity = 0.6,
+                  title = "Outcome")
+      
         
       m_b
       
@@ -429,7 +401,7 @@ shiny::shinyApp(
     output$note <- renderText({
      paste0("Click a <font color=\"yellow\">yellow</font> bike station to find out the number of available bikes there. ", 
             "<br/><br/>",
-            "Circles in other colors denote those traffic accidents in 2020 which involved one or more bikes. See label for more info.")
+            "Circles in other colors denote those traffic accidents in 2016-2020 which involved one or more bikes. See label for more info.")
     })
   
     
