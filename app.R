@@ -1,7 +1,6 @@
 library(shiny)
 library(shinyMobile)
 library(leaflet)
-#library(leaflet.extras)
 library(tidyverse)
 library(sf)
 library(shinyjs)
@@ -52,10 +51,6 @@ bikestations_in_distr_in_area <- readRDS("bikestations_in_distr_in_area_latest.R
 #--------------------
 
 b_acc <- readRDS("b_acc.RDS")
-# b_acc <- b_acc_in_distr_in_area %>% 
-#   filter(!is.na(Name.x)) %>% 
-#   mutate(severity = ifelse(vakav == 1, "death",
-#                            ifelse(vakav == 2, "injured", "severely injured")))
 
 #-----------------
 # shinyMobile app
@@ -217,7 +212,7 @@ shiny::shinyApp(
              # ),
              
              f7Tab(
-               tabName = "Bike accidents in 2020",
+               tabName = "Bike accidents (2020)",
                icon = f7Icon("exclamationmark_triangle"),
                active = FALSE,
                
@@ -285,7 +280,7 @@ shiny::shinyApp(
   server = function(input, output, session) {
     
     pal <- colorFactor(
-      palette = c("black", "red", "purple"),
+      palette = c("black", "purple", "red"),
       domain = b_acc$vakav
     )
     
@@ -443,9 +438,9 @@ shiny::shinyApp(
       
       click <- input$dist_marker_click
       
-      # Exclude the 'I am here' marker
-      req(!click$group == "Me")
-      
+      # Exclude other markers
+      req(click$group == "Bike stations")
+
       lo <- formatC(click$lat, digits = 5, format = "f")
       la <- formatC(click$lng, digits = 5, format = "f")
       
@@ -502,7 +497,7 @@ shiny::shinyApp(
       
     })
     
-    # Update the maps and the histogram when the 'Where are we?' map is clicked,
+    # Update the maps (and the histogram if in use) when the 'Where are we?' map is clicked,
     # or when a new district is chosen from the list
     observeEvent( r$d, {
       req(r$d != input$target)
