@@ -5,7 +5,6 @@ library(tidyverse)
 library(sf)
 library(shinyjs)
 
-
 #----------
 # Districts 
 #----------
@@ -22,7 +21,7 @@ Espoo_Vantaa <- c("Otaniemi", "Westend", "Ruukinranta", "Mäkkylä",
 
 districts <- districts[!districts %in% Espoo_Vantaa]
 
-# Helsinki land area for the 'Where are we?' map 
+# Helsinki land area for the 'Where are we' map 
 hki <- distr_in_area %>% 
   filter(!Name.x %in% c("Ulkosaaret", "Miessaari", "Aluemeri",
                         "Länsisaaret", "Itäsaaret", Espoo_Vantaa))
@@ -179,7 +178,7 @@ shiny::shinyApp(
              ),
              
              f7Tab(
-               tabName = "Where are we?",
+               tabName = "WhereAreWe",
                icon = f7Icon("location"),
                active = FALSE,
                
@@ -198,7 +197,7 @@ shiny::shinyApp(
              ),
              
              f7Tab(
-               tabName = "Bike accidents",
+               tabName = "BikeAccidents",
                icon = f7Icon("exclamationmark_triangle"),
                active = FALSE,
                
@@ -270,7 +269,7 @@ shiny::shinyApp(
       domain = b_acc$severity
     )
     
-    # The name of the district clicked in the "Where are we?" map
+    # The name of the district clicked in the "Where are we" map
     r <- reactiveValues(
       d = NULL)
     
@@ -428,7 +427,7 @@ shiny::shinyApp(
             "<br/><br/>",
             "Circles in other colors show those traffic accidents in 2016-2020 which involved one or more bikes. See label for more info.",
             "<br/><br/>",
-            "The default detail map is about the district of Kluuvi. Choose another district from the dropdown list above, or by clicking an area in the tab <i>Where are we?</i>")
+            "The default detail map is about the district of Kluuvi. Choose another district from the dropdown list above, or by clicking an area in the tab <i>Where are we</i>")
     })
   
     
@@ -454,7 +453,8 @@ shiny::shinyApp(
       res <- httr::POST(url = "https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql",
                         body = paste0('{bikeRentalStation(id:"', bike_station_clicked, '"){name bikesAvailable}}'),
                         httr::add_headers(.headers = c("accept" = "application/json",
-                                                       "Content-Type" = "application/graphql")))
+                                                       "Content-Type" = "application/graphql",
+                                                       "digitransit-subscription-key" = "[your key here")))
       
       json <- jsonlite::fromJSON(httr::content(res, as = "text"))
       
@@ -473,7 +473,7 @@ shiny::shinyApp(
     })
     
     
-    # When the "Where are we?" map is clicked
+    # When the "Where are we" map is clicked
     observeEvent( input$bigdist_shape_click, {
       
       dclick <- input$bigdist_shape_click
@@ -496,7 +496,7 @@ shiny::shinyApp(
       
     })
     
-    # Update the maps (and the histogram if in use) when the 'Where are we?' map is clicked,
+    # Update the maps (and the histogram if in use) when the 'Where are we' map is clicked,
     # or when a new district is chosen from the list
     observeEvent( r$d, {
       req(r$d != input$target)
